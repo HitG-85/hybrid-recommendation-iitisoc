@@ -13,8 +13,11 @@ CREATE TABLE items (
 
 CREATE TABLE interactions (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    item_id INTEGER REFERENCES items(id),
-    interaction_type VARCHAR(50),
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    user_id INT REFERENCES users(id),
+    item_id INT REFERENCES items(id),
+    interaction_type VARCHAR(20),
+    interaction_strength FLOAT,
+    watch_percentage FLOAT,
+    rewatch_count INT,
+    timestamp TIMESTAMP
 );
