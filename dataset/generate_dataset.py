@@ -63,7 +63,7 @@ interaction_rules={
    "save": {
       "watch_range":(0.81, 1.00),
       "strength_range":(0.75, 0.95),
-      "rewatch_range":(2,4)
+      "rewatch_range":(0,3)
    },
    "share": {
       "watch_range":(0.70, 1.00),
