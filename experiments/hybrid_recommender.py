@@ -53,7 +53,10 @@ def recommend_hybrid(user_id, top_n=10):
 
 if __name__ == "__main__":
 
-    recommendations = recommend_hybrid(15)
+    recommendations = recommend_hybrid(
+        15,
+        top_n=100
+    )[:10]
 
     for item_id, score in recommendations:
 

@@ -21,3 +21,12 @@ CREATE TABLE interactions (
     rewatch_count INT,
     timestamp TIMESTAMP
 );
+
+CREATE TABLE recommendations (
+    user_id INT REFERENCES users(id),
+    item_id INT REFERENCES items(id),
+    score FLOAT,
+    rank INT,
+
+    PRIMARY KEY (user_id, rank)
+);
