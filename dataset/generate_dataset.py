@@ -7,9 +7,9 @@ fake=Faker()
 random.seed(42)
 Faker.seed(42)
 
-num_users=20
-num_items=50
-num_interactions=200
+num_users=500
+num_items=5000
+num_interactions=150000
 
 categories = [
     "comedy", "fitness", "fashion", "gaming", "food", "travel",
@@ -92,3 +92,14 @@ for interaction_id in range(1,num_interactions+1):
     "timestamp":fake.date_time_between(start_date="-60d", end_date="now")
    })
    
+users_df = pd.DataFrame(users)
+items_df = pd.DataFrame(items)
+interactions_df = pd.DataFrame(interactions)
+
+
+users_df.to_csv("dataset/users.csv", index=False)
+items_df.to_csv("dataset/items.csv", index=False)
+interactions_df.to_csv("dataset/interactions.csv", index=False)
+
+
+print("CSV files generated successfully!")
