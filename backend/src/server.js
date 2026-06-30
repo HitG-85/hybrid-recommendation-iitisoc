@@ -1,7 +1,9 @@
 const express = require("express");
 const pool = require("./config/db");
-
+const recommendationsRouter = require("./routes/recommendations");
 const app = express();
+
+app.use(express.json());
 
 pool.connect()
     .then(() => {
@@ -10,6 +12,7 @@ pool.connect()
     .catch((err) => {
         console.error("Connection failed:", err);
     });
+app.use(recommendationsRouter);
 
 app.get("/", (req, res) => {
   res.send("Backend is running");
