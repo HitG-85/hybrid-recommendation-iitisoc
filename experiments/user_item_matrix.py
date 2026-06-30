@@ -1,9 +1,10 @@
 import pandas as pd
 import psycopg2
 
-conn=psycopg2.connect(
+conn = psycopg2.connect(
     dbname="hybrid_recommendation_db",
-    user="shivikasingh"
+    user="postgres",
+    password="1234qwerA@"
 )
 
 df=pd.read_sql("SELECT * from interactions", conn)

@@ -14,10 +14,17 @@ router.get("/recommendations/:userId", async (req, res) => {
 
   try {
     const query = `
-      SELECT user_id, item_id, score, rank
-      FROM recommendations
-      WHERE user_id = $1
-      ORDER BY rank
+      SELECT
+        r.user_id,
+        r.item_id,
+        i.category,
+        r.score,
+        r.rank
+      FROM recommendations r
+      JOIN items i
+      ON r.item_id = i.id
+      WHERE r.user_id = $1
+      ORDER BY r.rank
       LIMIT 10
     `;
     const { rows } = await pool.query(query, [userId]);

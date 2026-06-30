@@ -1,9 +1,11 @@
+const cors = require("cors");
 const express = require("express");
 const pool = require("./config/db");
 const recommendationsRouter = require("./routes/recommendations");
 const app = express();
 
 app.use(express.json());
+app.use(cors());
 
 pool.connect()
     .then(() => {
