@@ -4,6 +4,9 @@ const router = express.Router();
 
 router.get("/recommendations/:userId", async (req, res) => {
   const userId = parseInt(req.params.userId, 10);
+  const page = parseInt(req.query.page || "1", 10);
+  const limit = 10;
+  const offset = (page - 1) * limit;
   const start = Date.now();
   if (Number.isNaN(userId)) {
     return res.status(400).json({
@@ -25,9 +28,10 @@ router.get("/recommendations/:userId", async (req, res) => {
       ON r.item_id = i.id
       WHERE r.user_id = $1
       ORDER BY r.rank
-      LIMIT 10
+      LIMIT $2
+      OFFSET $3
     `;
-    const { rows } = await pool.query(query, [userId]);
+    const { rows } = await pool.query(query, [userId,limit,offset]);
     const end = Date.now();
 
     console.log(`Recommendation DB query took ${end - start} ms`);

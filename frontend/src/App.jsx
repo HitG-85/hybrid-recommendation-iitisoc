@@ -20,18 +20,23 @@ function App() {
 
   const videoRefs = useRef([]);
 
+  const pageRef = useRef(1);
+
   const videom = {
-    beauty: "/videos/beauty.mp4",
-    food: "/videos/food.mp4",
-    fitness: "/videos/fitness.mp4",
-    travel: "/videos/travel.mp4",
-    education: "/videos/education.mp4",
-    fashion: "/videos/fashion.mp4",
-    gaming: "/videos/gaming.mp4",
-    sports: "/videos/sports.mp4",
-    comedy: "/videos/comedy.mp4",
-    tech: "/videos/tech.mp4",
-    memes: "/videos/memes.mp4",
+    beauty:"/videos/beauty.mp4",
+    food:"/videos/food.mp4",
+    fitness:"/videos/fitness.mp4",
+    travel:"/videos/travel.mp4",
+    education:"/videos/education.mp4",
+    fashion:"/videos/fashion.mp4",
+    gaming:"/videos/gaming.mp4",
+    sports:"/videos/sports.mp4",
+    comedy:"/videos/comedy.mp4",
+    tech:"/videos/tech.mp4",
+    memes:"/videos/memes.mp4",
+    music:"/videos/music.mp4",
+    news:"/videos/news.mp4",
+    
   };
 
   const toggleCreator = (index) => {
@@ -45,15 +50,15 @@ function App() {
     try {
       totalStartRef.current = performance.now();
       const start = performance.now();
-      const response = await axios.get(
-        "http://localhost:5100/recommendations/1"
-      );
+      const response = await axios.get(`http://localhost:5100/recommendations/1?page=${pageRef.current}`);
+      if (response.data.length === 0) {return;}
       const end = performance.now();
       setLatency(Math.round(end - start));
       const mappedVideos = response.data.map((item) => ({
         video: videom[item.category],
       }));
       setVideos((prev) => [...prev, ...mappedVideos]);
+      pageRef.current++;
       } catch (err) {
       console.error(err);
       } finally {
