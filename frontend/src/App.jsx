@@ -8,6 +8,10 @@ function App() {
 
   const [latency, setLatency] = useState(0);
 
+  const [queryTime, setQueryTime] = useState(0);
+
+  const [cacheStatus, setCacheStatus] = useState("MISS");
+
   const [loading, setLoading] = useState(false);
 
   const [totalLatency, setTotalLatency] = useState(0);
@@ -51,10 +55,13 @@ function App() {
       totalStartRef.current = performance.now();
       const start = performance.now();
       const response = await axios.get(`http://localhost:5100/recommendations/1?page=${pageRef.current}`);
-      if (response.data.length === 0) {return;}
+      const recommendations = response.data.recommendations || [];
+      if (recommendations.length === 0) {return;}
       const end = performance.now();
       setLatency(Math.round(end - start));
-      const mappedVideos = response.data.map((item) => ({
+      setQueryTime(response.data.queryTime || 0);
+      setCacheStatus(response.data.cacheStatus || "MISS");
+      const mappedVideos = recommendations.map((item) => ({
         video: videom[item.category],
       }));
       setVideos((prev) => [...prev, ...mappedVideos]);
@@ -213,6 +220,14 @@ function App() {
           <div className="latency-card">
             <p>API Latency</p>
             <span>{latency} ms</span>
+          </div>
+          <div className="latency-card">
+            <p>DB Query Time</p>
+            <span>{queryTime} ms</span>
+          </div>
+          <div className="latency-card">
+            <p>Cache Status</p>
+            <span>{cacheStatus}</span>
           </div>
           <div className="latency-card">
             <p>Total Latency</p>

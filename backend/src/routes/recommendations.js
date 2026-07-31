@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/db");
+const { getCachedRecommendations, setCachedRecommendations } = require("../config/redis");
 const router = express.Router();
 
 router.get("/recommendations/:userId", async (req, res) => {
@@ -16,6 +17,17 @@ router.get("/recommendations/:userId", async (req, res) => {
   }
 
   try {
+    const cacheKey = `recommendations:user:${userId}:page:${page}`;
+    const cached = await getCachedRecommendations(cacheKey);
+
+    if (cached) {
+      return res.json({
+        recommendations: cached,
+        queryTime: 0,
+        cacheStatus: "HIT",
+      });
+    }
+
     const query = `
       SELECT
         r.user_id,
@@ -31,11 +43,18 @@ router.get("/recommendations/:userId", async (req, res) => {
       LIMIT $2
       OFFSET $3
     `;
-    const { rows } = await pool.query(query, [userId,limit,offset]);
+    const { rows } = await pool.query(query, [userId, limit, offset]);
     const end = Date.now();
+    const queryTime = end - start;
 
-    console.log(`Recommendation DB query took ${end - start} ms`);
-    return res.json(rows);
+    await setCachedRecommendations(cacheKey, rows);
+
+    console.log(`Recommendation DB query took ${queryTime} ms`);
+    return res.json({
+      recommendations: rows,
+      queryTime,
+      cacheStatus: "MISS",
+    });
   } catch (error) {
     const end = Date.now();
     console.error(`Recommendation DB query failed after ${end - start} ms`, error);
