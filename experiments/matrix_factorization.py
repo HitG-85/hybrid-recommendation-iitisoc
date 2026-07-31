@@ -27,27 +27,36 @@ def normalize_scores(scores):
         / (max_score - min_score)
     )
 
-def recommend_mf(user_id, top_n=10):
+def score_mf(user_id):
     if user_id not in matrix.index:
         return pd.Series(dtype=float)
-    
-    
-    user_index = matrix.index.get_loc(user_id)
-    item_ids, scores = model.recommend(
-     userid=user_index,
-     user_items=sparse_matrix[user_index],
-     N=top_n,
-     filter_already_liked_items=True
-)
-    recommendations = pd.Series(
-     data=scores,
-     index=matrix.columns[item_ids]
-)
-    recommendations = normalize_scores(
-        recommendations
-    )
 
-    return recommendations
+    user_index = matrix.index.get_loc(user_id)
+    
+    
+    # gives a real latent score for every item, no truncation
+    all_scores = model.item_factors @ model.user_factors[user_index]
+    
+    result = pd.Series(
+        data=all_scores,
+        index=matrix.columns
+    )
+    
+    return normalize_scores(result)
+
+
+def recommend_mf(user_id, top_n=10):
+    """Recommendation function - filters seen items at the END"""
+    all_scores = score_mf(user_id)
+
+    if all_scores.empty:
+        return pd.Series(dtype=float)
+
+    # filter seen items HERE
+    seen_items = set(matrix.loc[user_id][matrix.loc[user_id] > 0].index)
+    unseen_scores = all_scores[~all_scores.index.isin(seen_items)]
+
+    return unseen_scores.head(top_n)
 
 if __name__ == "__main__":
 

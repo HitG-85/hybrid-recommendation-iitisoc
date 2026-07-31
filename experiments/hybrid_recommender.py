@@ -1,54 +1,64 @@
-from knn import recommend_knn
-from graph_recommender import recommend_graph
-from matrix_factorization import recommend_mf
 import pandas as pd
+import pickle
+from knn import recommend_knn, score_knn
+from graph_recommender import recommend_graph, score_graph
+from matrix_factorization import recommend_mf, score_mf
 
 items_df = pd.read_csv("../dataset/items.csv")
-
-item_categories = dict(
-    zip(items_df["id"], items_df["category"])
-)
+item_categories = dict(zip(items_df["id"], items_df["category"]))
 
 
-def recommend_hybrid(user_id, top_n=10):
+with open("../dataset/ranker_model.pkl", "rb") as f:
+    ranker = pickle.load(f)
 
-    knn_recs = recommend_knn(user_id, top_n=top_n)
-    graph_recs = recommend_graph(user_id, top_n=top_n)
-    mf_recs = recommend_mf(user_id, top_n=top_n)
 
-    final_scores = {}
+def recommend_hybrid(user_id, top_n=10, candidate_pool_size=100):
 
-    # KNN contribution
-    for item_id, score in knn_recs:
+    
+    knn_recs   = recommend_knn(user_id, top_n=candidate_pool_size)
+    graph_recs = recommend_graph(user_id, top_n=candidate_pool_size)
+    mf_recs    = recommend_mf(user_id, top_n=candidate_pool_size)
 
-        final_scores[item_id] = (
-            final_scores.get(item_id, 0)
-            + 0.35 * score
-        )
+    
+    candidate_ids = list(dict.fromkeys(
+        [item_id for item_id, _ in knn_recs] +
+        [item_id for item_id, _ in graph_recs] +
+        list(mf_recs.index)
+    ))
 
-    # Graph contribution
-    for item_id, score in graph_recs:
+    if not candidate_ids:
+        return []
 
-        final_scores[item_id] = (
-            final_scores.get(item_id, 0)
-            + 0.20 * score
-        )
+    
+    knn_scores   = score_knn(user_id)
+    graph_scores = score_graph(user_id)
+    mf_scores    = score_mf(user_id)
 
-    # MF contribution
-    for item_id, score in mf_recs.items():
+    
+    feature_rows = []
+    for item_id in candidate_ids:
+        feature_rows.append({
+            "item_id":     item_id,
+            "knn_score":   knn_scores.get(item_id, 0.0),
+            "graph_score": graph_scores.get(item_id, 0.0),
+            "mf_score":    float(mf_scores.get(item_id, 0.0))
+        })
 
-        final_scores[item_id] = (
-            final_scores.get(item_id, 0)
-            + 0.45 * score
-        )
+    features_df = pd.DataFrame(feature_rows)
 
-    recommendations = sorted(
-        final_scores.items(),
-        key=lambda x: x[1],
-        reverse=True
+    
+    features_df["final_score"] = ranker.predict(
+        features_df[["knn_score", "graph_score", "mf_score"]]
     )
 
-    return recommendations[:top_n]
+    
+    recommendations = (
+        features_df
+        .sort_values("final_score", ascending=False)
+        .head(top_n)
+    )
+
+    return list(zip(recommendations["item_id"], recommendations["final_score"]))
 
 
 if __name__ == "__main__":
@@ -56,15 +66,9 @@ if __name__ == "__main__":
     recommendations = recommend_hybrid(15)
 
     for item_id, score in recommendations:
-
-        category = item_categories.get(
-            item_id,
-            "Unknown"
-        )
-
+        category = item_categories.get(item_id, "Unknown")
         print(
             f"Item {item_id} | "
             f"Category: {category} | "
             f"Hybrid Score: {score:.3f}"
         )
-        

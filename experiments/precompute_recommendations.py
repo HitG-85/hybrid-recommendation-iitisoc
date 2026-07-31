@@ -6,8 +6,8 @@ from user_item_matrix import matrix
 
 conn = psycopg2.connect(
     dbname="hybrid_recommendation_db",
-    user="postgres",
-    password="1234qwerA@"
+    user="shivikasingh",
+    password=""
 )
 
 cursor = conn.cursor()

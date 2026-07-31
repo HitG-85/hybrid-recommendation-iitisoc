@@ -29,62 +29,49 @@ def fallback_recommendations(user_id, top_n=10):
     return list(item_popularity.head(top_n).items())
 
 ##print(top_k)
-def recommend_knn(user_id, k=3, top_n=10):
-
+def score_knn(user_id, k=3):
+    """Scores ALL items including seen ones - for ranker training"""
     top_k = get_similar_users(user_id).head(k)
     if top_k.empty:
-        print(f"User {user_id} has no new unseen items from similar users. Using fallback recommendations.")
-        return fallback_recommendations(user_id,top_n)
-
-    seen_items = matrix.loc[user_id]
-    seen_items = seen_items[seen_items > 0]
+        return {}
 
     candidate_weighted_scores = {}
     candidate_similarity_sums = {}
 
     for similar_user, similarity in top_k.items():
-
         user_items = matrix.loc[similar_user]
+        interacted_items = user_items[user_items > 0]  # NO seen filter here
 
-        unseen_items = user_items[
-            (user_items > 0)
-            & (~user_items.index.isin(seen_items.index))
-        ]
-
-        for item_id, item_score in unseen_items.items():
-
+        for item_id, item_score in interacted_items.items():
             weighted_score = similarity * item_score
-
             candidate_weighted_scores[item_id] = (
-                candidate_weighted_scores.get(item_id, 0)
-                + weighted_score
+                candidate_weighted_scores.get(item_id, 0) + weighted_score
             )
-
             candidate_similarity_sums[item_id] = (
-                candidate_similarity_sums.get(item_id, 0)
-                + similarity
+                candidate_similarity_sums.get(item_id, 0) + similarity
             )
 
-    candidate_scores = {}
+    return {
+        item_id: candidate_weighted_scores[item_id] / candidate_similarity_sums[item_id]
+        for item_id in candidate_weighted_scores
+    }
 
-    for item_id in candidate_weighted_scores:
 
-        candidate_scores[item_id] = (
-            candidate_weighted_scores[item_id]
-            / candidate_similarity_sums[item_id]
-        )
-    
-    if not candidate_scores:
-        print(f"User {user_id} has no new unseen items from similar users. Using fallback recommendations.")
-        return fallback_recommendations(user_id,top_n)
-    
-    recommendations = sorted(
-        candidate_scores.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
+def recommend_knn(user_id, k=3, top_n=10):
+    """Recommendation function - filters seen items at the END"""
+    all_scores = score_knn(user_id, k)
 
-    return recommendations[:top_n]
+    if not all_scores:
+        return fallback_recommendations(user_id, top_n)
+
+    # filter seen items HERE, not inside scoring
+    seen_items = set(matrix.loc[user_id][matrix.loc[user_id] > 0].index)
+    unseen_scores = {k: v for k, v in all_scores.items() if k not in seen_items}
+
+    if not unseen_scores:
+        return fallback_recommendations(user_id, top_n)
+
+    return sorted(unseen_scores.items(), key=lambda x: x[1], reverse=True)[:top_n]
 
 if __name__ == "__main__":
 

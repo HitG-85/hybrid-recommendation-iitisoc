@@ -3,8 +3,8 @@ import psycopg2
 
 conn = psycopg2.connect(
     dbname="hybrid_recommendation_db",
-    user="postgres",
-    password="1234qwerA@"
+    user="shivikasingh",
+    password=""
 )
 
 df=pd.read_sql("SELECT * from interactions", conn)

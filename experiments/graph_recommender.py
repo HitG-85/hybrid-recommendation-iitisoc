@@ -31,32 +31,48 @@ def get_seen_items(user_id):
     seen=row[row>0].index
     return set(seen)
 
-def get_graph_score(user_id):
-    seen_items=get_seen_items(user_id)
-
+def score_graph(user_id):
+    """Scores ALL items including seen ones - for ranker training"""
+    seen_items = get_seen_items(user_id)
     if not seen_items:
         return {}
-    
-    graph_scores={}
 
-    #hook_item is the item with control in for loop.
-    for hook_item in seen_items: 
-        user_for_hook_item=matrix.index[matrix[hook_item]>0]
+    graph_scores = {}
 
-        for neighbour_user in user_for_hook_item:
-            if neighbour_user==user_id:
+    for hook_item in seen_items:
+        users_for_hook_item = matrix.index[matrix[hook_item] > 0]
+
+        for neighbour_user in users_for_hook_item:
+            if neighbour_user == user_id:
                 continue
 
-            neighbour_row=matrix.loc[neighbour_user]
-            neighbour_items=neighbour_row[neighbour_row>0]
+            neighbour_row = matrix.loc[neighbour_user]
+            neighbour_items = neighbour_row[neighbour_row > 0]
 
             for candidate_item, candidate_strength in neighbour_items.items():
-                if candidate_item in seen_items:
-                    continue
+                # NO seen filter here
+                graph_scores[candidate_item] = (
+                    graph_scores.get(candidate_item, 0) + float(candidate_strength)
+                )
 
-                graph_scores[candidate_item]= (graph_scores.get(candidate_item,0)+float(candidate_strength))
+    return normalize_scores(graph_scores)
 
-    return graph_scores 
+
+def recommend_graph(user_id, top_n=10):
+    """Recommendation function - filters seen items at the END"""
+    all_scores = score_graph(user_id)
+
+    if not all_scores:
+        return fallback_recommendations(user_id, top_n)
+
+    # filter seen items HERE
+    seen_items = get_seen_items(user_id)
+    unseen_scores = {k: v for k, v in all_scores.items() if k not in seen_items}
+
+    if not unseen_scores:
+        return fallback_recommendations(user_id, top_n)
+
+    return sorted(unseen_scores.items(), key=lambda x: x[1], reverse=True)[:top_n] 
             
 def normalize_scores(score_dict):             #here score_dict is graph_scores
     if not score_dict:
@@ -72,15 +88,19 @@ def normalize_scores(score_dict):             #here score_dict is graph_scores
     return normalised_dict
 
 def recommend_graph(user_id, top_n=10):
-    raw_graph_scores = get_graph_score(user_id)
+    all_scores = score_graph(user_id)
 
-    if not raw_graph_scores:
+    if not all_scores:
         return fallback_recommendations(user_id, top_n)
 
-    new_graph_scores = normalize_scores(raw_graph_scores)
+    seen_items = get_seen_items(user_id)
+    unseen_scores = {k: v for k, v in all_scores.items() if k not in seen_items}
+
+    if not unseen_scores:
+        return fallback_recommendations(user_id, top_n)
 
     recommendations = sorted(
-        new_graph_scores.items(),
+        unseen_scores.items(),
         key=lambda x: x[1],
         reverse=True
     )
@@ -103,21 +123,11 @@ if __name__ == "__main__":
         )
 
     
-# user_id = 12
+# check user 15's interaction history categories
+seen = get_seen_items(15)
+for item_id in seen:
+    print(item_id, item_categories[item_id])
 
-# print(f"Seen items for User {user_id}:\n")
-
-# for item_id in sorted(get_seen_items(user_id)):
-#     score = matrix.loc[user_id, item_id]
-#     category = item_categories[item_id]
-
-#     print(
-#         f"Item {item_id} | "
-#         f"Category: {category} | "
-#         f"Interaction: {score:.3f}"
-#     )
-    
-            
 
     
             
